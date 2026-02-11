@@ -83,3 +83,32 @@ body {
 .btn-increase:active {
     transform: scale(0.98);
 }
+
+.btn-decrease {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    letter-spacing: 0.5px;
+    margin-top: 1rem;
+    display: block;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.btn-decrease:hover {
+    background-color: #dc2626;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+}
+
+.btn-decrease:active {
+    transform: scale(0.98);
+}
