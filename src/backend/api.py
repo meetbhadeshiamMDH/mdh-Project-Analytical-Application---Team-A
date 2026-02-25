@@ -3,11 +3,12 @@ API Module
 
 This module defines the API endpoints for the bike theft analysis backend.
 """
-
-from flask import Flask, jsonify
+import os
+import json
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sys
-import os
+from datetime import datetime, timedelta
 
 # Add parent directory to path to allow imports from backend module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,7 +19,9 @@ from backend.data_processing import (
     get_time_series_data,
     get_bicycle_type_distribution,
     get_hourly_distribution,
-    get_financial_damage_distribution
+    get_financial_damage_distribution,
+    get_daily_stats,
+    get_weekly_comparison_stats
 )
 
 app = Flask(__name__)
@@ -40,13 +43,71 @@ def home():
     return jsonify({
         'message': 'Bike Theft Analysis API',
         'version': '1.0',
+        'info': 'Access /api/help for a list of available endpoints.'
+    })
+
+
+@app.route('/api/lor-geojson')
+def get_lor_geojson():
+    """Serve the reprojected LOR Planungsräume GeoJSON."""
+    geojson_path = os.path.join('data', 'lor_plr_4326.geojson')
+    if not os.path.exists(geojson_path):
+        return jsonify({'error': 'GeoJSON file not found'}), 404
+    
+    try:
+        with open(geojson_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/bzr-geojson')
+def get_bzr_geojson():
+    """Serve the reprojected BZR Bezirksregionen GeoJSON."""
+    geojson_path = os.path.join('data', 'lor_bzr_4326.geojson')
+    if not os.path.exists(geojson_path):
+        return jsonify({'error': 'GeoJSON file not found'}), 404
+    
+    try:
+        with open(geojson_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/bike-categories')
+def get_bike_categories():
+    """Get list of unique bicycle types."""
+    if bike_data is None:
+        return jsonify({'error': 'Data not loaded'}), 500
+    
+    try:
+        if 'Type of bicycle' in bike_data.columns:
+            categories = sorted(bike_data['Type of bicycle'].dropna().unique().tolist())
+            return jsonify(categories)
+        return jsonify([])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/help')
+def get_help():
+    """List all available API endpoints."""
+    return jsonify({
         'endpoints': [
             '/api/summary',
             '/api/time-series',
             '/api/bicycle-types',
             '/api/hourly-distribution',
             '/api/financial-damage',
-            '/api/dashboard-data'
+            '/api/daily-stats',
+            '/api/weekly-comparison',
+            '/api/lor-geojson',
+            '/api/bzr-geojson',
+            '/api/bike-categories',
+            '/api/help'
         ]
     })
 
@@ -131,6 +192,43 @@ def get_dashboard_data():
             'financialDamage': get_financial_damage_distribution(bike_data)
         }
         return jsonify(dashboard_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/api/daily-stats')
+def get_daily_stats_endpoint():
+    """Get case count and total financial damage for a specific date."""
+    if bike_data is None:
+        return jsonify({'error': 'Data not loaded'}), 500
+
+    date_str = request.args.get('date')
+    bike_type = request.args.get('bike_type')
+    if not date_str:
+        return jsonify({'error': 'Missing required query parameter: date (YYYY-MM-DD)'}), 400
+
+    try:
+        stats = get_daily_stats(bike_data, date_str, bike_type)
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/weekly-comparison')
+def get_weekly_comparison_endpoint():
+    """Get a 7-day side-by-side comparison (W1 vs W2)."""
+    if bike_data is None:
+        return jsonify({'error': 'Data not loaded'}), 500
+
+    date_str = request.args.get('date')
+    bike_type = request.args.get('bike_type')
+    if not date_str:
+        return jsonify({'error': 'Missing required query parameter: date (YYYY-MM-DD)'}), 400
+
+    try:
+        stats = get_weekly_comparison_stats(bike_data, date_str, bike_type)
+        return jsonify(stats)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

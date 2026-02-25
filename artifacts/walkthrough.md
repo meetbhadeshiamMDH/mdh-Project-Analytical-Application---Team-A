@@ -1,50 +1,37 @@
 # Berlin Bike Theft Analysis Dashboard Walkthrough
 
-I have successfully built and verified the interactive dashboard for analyzing bike theft data in Berlin. The dashboard uses a modern React + TypeScript frontend with Recharts for visualizations and a Flask backend for data processing.
+I have enhanced the Berlin Bike Theft dashboard with a persistent sidebar and a new interactive comparison feature.
 
-## Accomplishments
+## Latest Enhancements
 
-- ✅ **Backend Implementation**: Built a Flask API that processes over 57,000 records from the `3 Bike Thefts.xlsx` dataset.
-- ✅ **Data Processing**: Implemented advanced pandas logic for temporal trends, bicycle type distribution, and financial damage analysis.
-- ✅ **Frontend Development**: Created a responsive React application using the tech stack from your mapping skill (TypeScript + Recharts + Tailwind CSS).
-- ✅ **UI/UX Design**: Implemented a modern dark-themed dashboard with glassmorphism effects and interactive charts.
-- ✅ **Auto-Integration**: Configured CORS and Proxy settings for seamless frontend-backend communication.
+- ✅ **Navigation Sidebar**: Added a left-hand sidebar for switching between views.
+- ✅ **Date Selectivity**: Integrated a reference date picker (default Jan 1, 2026) to drive comparison logic.
+- ✅ **Last 7 Day Comparison**: Created a new view to compare theft stats from "Yesterday" vs. the same day from the previous week.
+- ✅ **Berlin Areas Map**: Integrated two side-by-side interactive maps of Berlin using LOR boundaries.
+- ✅ **BZR Default Level**: Set Bezirksregionen (BZR) as the default map level for broader aerial overview.
+- ✅ **BZR/PLR Filtering**: Users can still toggle down to Planungsräume (PLR) for granular detail.
+- ✅ **Bike Category Filter**: Added a dynamic filter to view thefts by specific bicycle types.
+- ✅ **Interactive All Regions**: Click any region to see its specific **Total Case Count** and **Theft Damage**.
+- ✅ **City-Wide Totals**: Added a summary to the map footer showing the **Total City Cases** for the selected date.
+- ✅ **Refined Popups**: Popups now feature a clean light design with **black text** for counts and **green text** for damage.
+- ✅ **Hover Feedback**: Added **hover highlights** and a **pointer cursor** to all regions for better discoverability.
+- ✅ **Chart Refinement**: Updated the "Thefts Over Time" chart with **sharp lines** and a **fuchsia color** for 2023 for improved clarity.
 
-## Final Dashboard
+## Feature Highlights
 
-![Berlin Bike Theft Dashboard](/home/meet/Analytical%20Application/mdh-Project-Analytical-Application---Team-A/artifacts/bike_theft_dashboard_final.png)
+![Dashboard Chart Refinement](/home/meet/.gemini/antigravity/brain/452cbb4b-be3d-4016-b717-f46826dd53dc/dashboard_chart_verification_1772027909378.png)
 
-## Key Visualizations
+### Last 7 Day Comparison
+This view calculates stats on the fly based on your selected "Reference Date". It's perfect for identifying weekly trends or sudden spikes. Includes a **Current Week (W1) vs. Previous Week (W2)** table and map for detailed spatial analysis.
 
-````carousel
-```json
-{
-  "total_thefts": 57277,
-  "avg_damage": 1220.1,
-  "attempt_rate": 0.43
-}
-```
-<!-- slide -->
-![Thefts Over Time Chart](/home/meet/Analytical%20Application/mdh-Project-Analytical-Application---Team-A/artifacts/bike_theft_dashboard_final.png)
-<!-- slide -->
-![Dashboard Interaction Recording](/home/meet/Analytical%20Application/mdh-Project-Analytical-Application---Team-A/artifacts/dashboard_demo.webp)
-````
+## Data Insights (2023–2025)
 
-## Verified Stats
+- **Total Records**: 59,707
+- **Financial Damage**: Visualized in €100 increments up to €3000+.
+- **Cycle Categories**: Normalized to handle variations (e.g., "Men's bike" → "Mens bicycle").
 
-- **Total Records Processed**: 57,277
-- **Data Range**: January 2023 - October 2025
-- **Average Financial Damage**: €1,220.10
-- **Most Stolen Type**: Mens bicycle
+## Operational Verification
 
-## How to Run
+The system was verified to handle out-of-range dates gracefully, displaying "No data available" when the selected comparison days fall outside the dataset (e.g., early 2026).
 
-1. **Start the Backend**:
-   ```bash
-   .venv/bin/python src/backend/api.py
-   ```
-2. **Start the Frontend**:
-   ```bash
-   cd src/frontend && npm run dev
-   ```
-3. Open `http://localhost:5173` in your browser.
+![Verification Recording](/home/meet/.gemini/antigravity/brain/452cbb4b-be3d-4016-b717-f46826dd53dc/final_ui_verification_sidebar_1772013478916.webp)

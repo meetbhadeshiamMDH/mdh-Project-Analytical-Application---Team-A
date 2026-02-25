@@ -79,3 +79,61 @@ export async function getHourlyDistribution(): Promise<HourlyData[]> {
 export async function getFinancialDamage(): Promise<FinancialDamageData[]> {
     return fetchAPI<FinancialDamageData[]>('/financial-damage');
 }
+
+export interface LORMetric {
+    id: string;
+    cases: number;
+    damage: number;
+}
+
+export interface LORStats {
+    plr: LORMetric[];
+    bzr: LORMetric[];
+}
+
+export interface DailyStats {
+    has_data: boolean;
+    case_count: number;
+    total_damage: number;
+    date: string;
+    lor_stats?: LORStats;
+}
+
+export interface WeeklyComparisonDay {
+    weekday: string;
+    w1: {
+        date: string;
+        cases: number;
+        damage: number;
+        lor_stats: LORStats;
+    };
+    w2: {
+        date: string;
+        cases: number;
+        damage: number;
+        lor_stats: LORStats;
+    };
+}
+
+export async function fetchDailyStats(date: string, bikeType?: string): Promise<DailyStats> {
+    const url = bikeType
+        ? `/daily-stats?date=${date}&bike_type=${encodeURIComponent(bikeType)}`
+        : `/daily-stats?date=${date}`;
+    return fetchAPI<DailyStats>(url);
+}
+
+export const fetchWeeklyComparison = (date: string, bikeType?: string) => {
+    const url = bikeType
+        ? `/weekly-comparison?date=${date}&bike_type=${encodeURIComponent(bikeType)}`
+        : `/weekly-comparison?date=${date}`;
+    return fetchAPI<WeeklyComparisonDay[]>(url);
+}
+
+export const fetchBikeCategories = () =>
+    fetchAPI<string[]>('/bike-categories');
+
+export const fetchLORGeoJSON = () =>
+    fetchAPI<any>('/lor-geojson');
+
+export const fetchBZRGeoJSON = () =>
+    fetchAPI<any>('/bzr-geojson');

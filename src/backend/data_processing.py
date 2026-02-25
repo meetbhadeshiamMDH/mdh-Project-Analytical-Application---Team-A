@@ -7,7 +7,7 @@ This module handles the cleaning and transformation of bike theft data.
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
 import os
 
 
@@ -247,6 +247,149 @@ def get_financial_damage_distribution(df: pd.DataFrame) -> List[Dict[str, Any]]:
         }
         for damage_range, count in damage_counts.items()
     ]
+
+
+def get_daily_stats(df: pd.DataFrame, date_str: str, bike_type: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Get case count and total financial damage for a specific date.
+
+    Args:
+        df: DataFrame with bike theft data
+        date_str: Date string in YYYY-MM-DD format
+        bike_type: Optional bike type filter
+
+    Returns:
+        Dictionary with case_count, total_damage, and has_data flag
+    """
+    if 'Start date' not in df.columns:
+        return {'has_data': False, 'case_count': 0, 'total_damage': 0.0, 'date': date_str}
+
+    try:
+        target_date = pd.to_datetime(date_str).normalize()
+    except Exception:
+        return {'has_data': False, 'case_count': 0, 'total_damage': 0.0, 'date': date_str}
+
+    # Filter rows matching the target date (ignore time component)
+    mask = df['Start date'].dt.normalize() == target_date
+    day_df = df[mask]
+    
+    # Filter by bike type if provided
+    if bike_type and 'Type of bicycle' in day_df.columns:
+        day_df = day_df[day_df['Type of bicycle'] == bike_type]
+
+    if day_df.empty:
+        return {'has_data': False, 'case_count': 0, 'total_damage': 0.0, 'date': date_str, 'lor_stats': {'plr': [], 'bzr': []}}
+
+    case_count = int(len(day_df))
+    total_damage = 0.0
+    if 'Financial damage' in day_df.columns:
+        total_damage = float(day_df['Financial damage'].sum(skipna=True))
+
+    return {
+        'has_data': True,
+        'case_count': case_count,
+        'total_damage': round(total_damage, 2),
+        'date': date_str,
+        'lor_stats': get_lor_metrics(day_df)
+    }
+
+
+def get_weekly_comparison_stats(df: pd.DataFrame, reference_date_str: str, bike_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Get a 7-day side-by-side comparison. 
+    W1 = 7 days ending on the day before reference_date.
+    W2 = The 7 days immediately preceding W1.
+
+    Args:
+        df: DataFrame with bike theft data
+        reference_date_str: Date string in YYYY-MM-DD format
+        bike_type: Optional bike type filter
+
+    Returns:
+        List of 7 objects comparing the same weekday across two weeks.
+    """
+    try:
+        ref_date = pd.to_datetime(reference_date_str).normalize()
+    except Exception:
+        return []
+    
+    # Filter by bike type globally for the comparison if provided
+    comp_df = df
+    if bike_type and 'Type of bicycle' in comp_df.columns:
+        comp_df = comp_df[comp_df['Type of bicycle'] == bike_type]
+
+    # Yesterday (W1 last day)
+    yesterday_date = ref_date - pd.Timedelta(days=1)
+    
+    # We want to return 7 rows, starting from 'yesterday' and going back 6 more days
+    comparison_data = []
+    
+    for i in range(7):
+        w1_day = yesterday_date - pd.Timedelta(days=i)
+        w2_day = w1_day - pd.Timedelta(days=7)
+        
+        # Stats for W1
+        mask1 = comp_df['Start date'].dt.normalize() == w1_day
+        day1_df = comp_df[mask1]
+        w1_stats = {
+            'date': w1_day.strftime('%Y-%m-%d'),
+            'cases': int(len(day1_df)),
+            'damage': float(day1_df['Financial damage'].sum()) if 'Financial damage' in day1_df.columns else 0.0
+        }
+        
+        # Stats for W2
+        mask2 = comp_df['Start date'].dt.normalize() == w2_day
+        day2_df = comp_df[mask2]
+        w2_stats = {
+            'date': w2_day.strftime('%Y-%m-%d'),
+            'cases': int(len(day2_df)),
+            'damage': float(day2_df['Financial damage'].sum()) if 'Financial damage' in day2_df.columns else 0.0
+        }
+        
+        comparison_data.append({
+            'weekday': w1_day.strftime('%A'),
+            'w1': {**w1_stats, 'lor_stats': get_lor_metrics(day1_df)},
+            'w2': {**w2_stats, 'lor_stats': get_lor_metrics(day2_df)}
+        })
+        
+    return comparison_data
+
+
+def get_lor_metrics(df: pd.DataFrame) -> Dict[str, List[Dict[str, Any]]]:
+    """Calculate case counts and damage aggregated by PLR and BZR levels."""
+    if df.empty or 'Unnamed: 5' not in df.columns:
+        return {'plr': [], 'bzr': []}
+    
+    # Financial damage column check
+    has_damage = 'Financial damage' in df.columns
+    
+    # Normalize PLR IDs to 8-digit strings
+    df_lor = df.copy()
+    df_lor['plr_id'] = df_lor['Unnamed: 5'].dropna().astype(str).str.zfill(8)
+    df_lor['bzr_id'] = df_lor['plr_id'].str[:6]
+    
+    # Aggregate by PLR
+    plr_agg = df_lor.groupby('plr_id').agg(
+        cases=('plr_id', 'size'),
+        damage=('Financial damage', 'sum') if has_damage else ('plr_id', lambda x: 0.0)
+    ).reset_index()
+    
+    # Aggregate by BZR
+    bzr_agg = df_lor.groupby('bzr_id').agg(
+        cases=('bzr_id', 'size'),
+        damage=('Financial damage', 'sum') if has_damage else ('bzr_id', lambda x: 0.0)
+    ).reset_index()
+    
+    return {
+        'plr': [
+            {'id': row['plr_id'], 'cases': int(row['cases']), 'damage': float(round(row['damage'], 2))}
+            for _, row in plr_agg.iterrows()
+        ],
+        'bzr': [
+            {'id': row['bzr_id'], 'cases': int(row['cases']), 'damage': float(round(row['damage'], 2))}
+            for _, row in bzr_agg.iterrows()
+        ]
+    }
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
