@@ -11,12 +11,13 @@ from typing import Dict, List, Any, Tuple
 import os
 
 
-def load_bike_theft_data(file_path: str = 'data/3 Bike Thefts.xlsx') -> pd.DataFrame:
+def load_bike_theft_data(file_path: str = 'data/3 Bike Thefts  FINAL EXCEL 0.xlsx', sheet_name: str = '2023 - 2025 EN') -> pd.DataFrame:
     """
     Load bike theft data from Excel file.
     
     Args:
         file_path: Path to the Excel file
+        sheet_name: Name of the sheet to load
         
     Returns:
         DataFrame with bike theft data
@@ -29,8 +30,43 @@ def load_bike_theft_data(file_path: str = 'data/3 Bike Thefts.xlsx') -> pd.DataF
         raise FileNotFoundError(f"Data file not found: {file_path}")
     
     try:
-        # Load the first sheet which contains the main data
-        df = pd.read_excel(file_path, sheet_name=0)
+        df = pd.read_excel(file_path, sheet_name=sheet_name)
+        
+        # Normalize column names: strip whitespace and convert to title case
+        # e.g. ' FINANCIAL DAMAGE' -> 'Financial Damage', 'START DATE' -> 'Start Date'
+        df.columns = [col.strip().title() for col in df.columns]
+        
+        # Map specific column names to match expected format
+        column_mapping = {
+            'Created On': 'Created on',
+            'Start Date': 'Start date',
+            'Start Hour': 'Start hour',
+            'End Date': 'End date',
+            'End Hour': 'End hour',
+            'Financial Damage': 'Financial damage',
+            'Type Of Bicycle': 'Type of bicycle',
+            'Offense Type': 'Offense type',
+            'Reason For Collection': 'Reason for collection',
+        }
+        df.rename(columns=column_mapping, inplace=True)
+        
+        # Translate German values to English
+        if 'Attempt' in df.columns:
+            df['Attempt'] = df['Attempt'].map({'No': 'No', 'Ja': 'Yes', 'Unbekannt': 'Unknown'}).fillna(df['Attempt'])
+        
+        # Normalize bicycle types
+        if 'Type of bicycle' in df.columns:
+            type_mapping = {
+                "Men's bike": "Mens bicycle",
+                "Women's Bicycle": "Womens bicycle",
+                "childrens bicycle": "Childrens bicycle",
+                "Mountainbike": "Mountain bike",
+                "various bicycles": "Various bicycles",
+                "various Bicycles": "Various bicycles",
+            }
+            # Also handle simple case normalization and stripping
+            df['Type of bicycle'] = df['Type of bicycle'].str.strip()
+            df['Type of bicycle'] = df['Type of bicycle'].replace(type_mapping)
         
         # Convert date columns to datetime
         date_columns = ['Created on', 'Start date', 'End date']
@@ -195,14 +231,14 @@ def get_financial_damage_distribution(df: pd.DataFrame) -> List[Dict[str, Any]]:
     # Filter out invalid/missing values
     df_clean = df[df['Financial damage'].notna()].copy()
     
-    # Define damage ranges
-    bins = [0, 250, 500, 1000, 2000, float('inf')]
-    labels = ['€0-250', '€251-500', '€501-1000', '€1001-2000', '€2000+']
+    # Define damage ranges in 100-euro steps up to 3000
+    bins = list(range(0, 3100, 100)) + [float('inf')]
+    labels = [f'€{bins[i]}-{bins[i+1]}' for i in range(len(bins)-2)] + ['€3000+']
     
-    df_clean['damage_range'] = pd.cut(df_clean['Financial damage'], bins=bins, labels=labels)
+    df_clean['damage_range'] = pd.cut(df_clean['Financial damage'], bins=bins, labels=labels, include_lowest=True)
     
     # Count by damage range
-    damage_counts = df_clean['damage_range'].value_counts()
+    damage_counts = df_clean['damage_range'].value_counts().sort_index()
     
     return [
         {

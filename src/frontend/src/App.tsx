@@ -7,6 +7,21 @@ function App() {
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedYears, setSelectedYears] = useState<Set<number>>(new Set([2023, 2024, 2025]));
+
+    const YEAR_COLORS: Record<number, string> = { 2023: '#3b82f6', 2024: '#10b981', 2025: '#f59e0b' };
+
+    const toggleYear = (yr: number) => {
+        setSelectedYears(prev => {
+            const next = new Set(prev);
+            if (next.has(yr)) {
+                if (next.size > 1) next.delete(yr); // keep at least 1 year
+            } else {
+                next.add(yr);
+            }
+            return next;
+        });
+    };
 
     useEffect(() => {
         async function loadData() {
@@ -49,11 +64,20 @@ function App() {
 
     const { summary, timeSeries, bicycleTypes, hourlyDistribution, financialDamage } = data;
 
-    // Format time series data for Recharts
-    const timeSeriesChartData = timeSeries.map(item => ({
-        date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        count: item.count,
-    }));
+    // Build per-month pivot for 3-year line chart: [{month:'Jan', 2023:N, 2024:N, 2025:N}, ...]
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const YEARS = [2023, 2024, 2025];
+    const timeSeriesChartData = MONTHS.map((month, mi) => {
+        const row: Record<string, string | number> = { month };
+        YEARS.forEach(yr => {
+            const match = timeSeries.find(item => {
+                const d = new Date(item.date);
+                return d.getFullYear() === yr && d.getMonth() === mi;
+            });
+            row[yr] = match ? match.count : 0;
+        });
+        return row;
+    });
 
     // Format hourly data
     const hourlyChartData = hourlyDistribution.map(item => ({
@@ -62,7 +86,7 @@ function App() {
     }));
 
     // Take top 10 bicycle types
-    const topBicycleTypes = bicycleTypes.slice(0, 10);
+    const topBicycleTypes = bicycleTypes.slice(0, 10).reverse();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
@@ -96,7 +120,7 @@ function App() {
                     />
                     <StatsCard
                         title="Data Period"
-                        value={summary.max_date ? new Date(summary.max_date).getFullYear() : 'N/A'}
+                        value="2023-2025"
                         subtitle={summary.min_date && summary.max_date
                             ? `${new Date(summary.min_date).toLocaleDateString()} - ${new Date(summary.max_date).toLocaleDateString()}`
                             : 'No data'}
@@ -105,27 +129,52 @@ function App() {
 
                 {/* Charts Grid */}
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    {/* Time Series Chart */}
+                    {/* Time Series Chart - 3 year lines, monthly x-axis */}
                     <div className="chart-container">
-                        <h2 className="mb-4 text-xl font-semibold text-white">Thefts Over Time</h2>
+                        <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+                            <h2 className="text-xl font-semibold text-white">Thefts between 2023 - 2025</h2>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setSelectedYears(new Set([2023, 2024, 2025]))}
+                                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${selectedYears.size === 3
+                                        ? 'bg-slate-500 border-slate-400 text-white'
+                                        : 'bg-transparent border-slate-600 text-slate-400 hover:border-slate-400'
+                                        }`}
+                                >All</button>
+                                {([2023, 2024, 2025] as number[]).map(yr => (
+                                    <button
+                                        key={yr}
+                                        onClick={() => toggleYear(yr)}
+                                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all`}
+                                        style={{
+                                            backgroundColor: selectedYears.has(yr) ? YEAR_COLORS[yr] + '33' : 'transparent',
+                                            borderColor: selectedYears.has(yr) ? YEAR_COLORS[yr] : '#4b5563',
+                                            color: selectedYears.has(yr) ? YEAR_COLORS[yr] : '#6b7280',
+                                        }}
+                                    >{yr}</button>
+                                ))}
+                            </div>
+                        </div>
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={timeSeriesChartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                <XAxis dataKey="date" stroke="#9ca3af" />
+                                <XAxis dataKey="month" stroke="#9ca3af" interval={0} />
                                 <YAxis stroke="#9ca3af" />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                     labelStyle={{ color: '#e2e8f0' }}
                                 />
-                                <Legend wrapperStyle={{ color: '#e2e8f0' }} />
-                                <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} name="Thefts" />
+
+                                {([2023, 2024, 2025] as number[]).filter(yr => selectedYears.has(yr)).map(yr => (
+                                    <Line key={yr} type="monotone" dataKey={String(yr)} stroke={YEAR_COLORS[yr]} strokeWidth={2} name={String(yr)} dot={false} />
+                                ))}
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
 
                     {/* Bicycle Types Chart */}
                     <div className="chart-container">
-                        <h2 className="mb-4 text-xl font-semibold text-white">Top Bicycle Types</h2>
+                        <h2 className="mb-4 text-xl font-semibold text-white">Cycle Categories</h2>
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={topBicycleTypes}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -135,8 +184,7 @@ function App() {
                                     contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                     labelStyle={{ color: '#e2e8f0' }}
                                 />
-                                <Legend wrapperStyle={{ color: '#e2e8f0' }} />
-                                <Bar dataKey="count" fill="#3b82f6" name="Thefts" />
+                                <Bar dataKey="count" fill="#3b82f6" name="Count" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -153,7 +201,7 @@ function App() {
                                     contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                     labelStyle={{ color: '#e2e8f0' }}
                                 />
-                                <Legend wrapperStyle={{ color: '#e2e8f0' }} />
+
                                 <Bar dataKey="count" fill="#10b981" name="Thefts" />
                             </BarChart>
                         </ResponsiveContainer>
@@ -165,14 +213,20 @@ function App() {
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={financialDamage}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                <XAxis dataKey="range" stroke="#9ca3af" />
+                                <XAxis
+                                    dataKey="range"
+                                    stroke="#9ca3af"
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={80}
+                                />
                                 <YAxis stroke="#9ca3af" />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                     labelStyle={{ color: '#e2e8f0' }}
                                 />
-                                <Legend wrapperStyle={{ color: '#e2e8f0' }} />
-                                <Bar dataKey="count" fill="#f59e0b" name="Incidents" />
+
+                                <Bar dataKey="count" fill="#f59e0b" name="Financial Damage" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

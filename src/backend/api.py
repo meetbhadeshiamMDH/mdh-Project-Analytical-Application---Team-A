@@ -25,7 +25,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
 # Load data once at startup
-DATA_FILE = 'data/3 Bike Thefts.xlsx'
+DATA_FILE = 'data/3 Bike Thefts  FINAL EXCEL 0.xlsx'
 try:
     bike_data = load_bike_theft_data(DATA_FILE)
     print(f"✓ Successfully loaded {len(bike_data)} records from {DATA_FILE}")
