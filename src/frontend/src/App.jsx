@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Dashboard from './components/Dashboard';
 import StatisticsDashboard from './components/StatisticsDashboard';
 import GeodataDashboard from './components/GeodataDashboard';
+import FinancialComparison from './components/FinancialComparison';
 import Sidebar from './components/Sidebar';
 
 function App() {
@@ -15,6 +16,8 @@ function App() {
         return <StatisticsDashboard />;
       case 'Geodata':
         return <GeodataDashboard />;
+      case 'Financials':
+        return <FinancialComparison />;
       default:
         return <Dashboard />;
     }

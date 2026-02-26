@@ -91,59 +91,59 @@ const GeodataDashboard = () => {
     }
 
     return (
-        <div className="dashboard-container" style={{ padding: '2rem' }}>
-            <main className="main-content">
-                <header style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: '800' }}>Geospatial Intelligence</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Interactive Heatmap of Berlin Bike Theft Hotspots</p>
-                </header>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '1.5rem', boxSizing: 'border-box', gap: '1rem' }}>
+            {/* Header */}
+            <header style={{ flexShrink: 0 }}>
+                <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: '800' }}>Geospatial Intelligence</h1>
+                <p style={{ color: 'var(--text-muted)', margin: '4px 0 0' }}>Interactive Heatmap of Berlin Bike Theft Hotspots</p>
+            </header>
 
-                <div style={{
-                    height: 'calc(100vh - 200px)',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    border: '1px solid var(--border-color)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                }}>
-                    <MapContainer
-                        center={[52.5200, 13.4050]}
-                        zoom={11}
-                        style={{ height: '100%', width: '100%', background: '#1a1d23' }}
-                    >
-                        <TileLayer
-                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            {/* Map — fills all remaining vertical space */}
+            <div style={{
+                flex: 1,
+                minHeight: 0,
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            }}>
+                <MapContainer
+                    center={[52.5200, 13.4050]}
+                    zoom={11}
+                    style={{ height: '100%', width: '100%', background: '#1a1d23' }}
+                >
+                    <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                    />
+                    {geoJsonData && (
+                        <GeoJSON
+                            data={geoJsonData}
+                            style={style}
+                            onEachFeature={onEachFeature}
                         />
-                        {geoJsonData && (
-                            <GeoJSON
-                                data={geoJsonData}
-                                style={style}
-                                onEachFeature={onEachFeature}
-                            />
-                        )}
-                    </MapContainer>
-                </div>
+                    )}
+                </MapContainer>
+            </div>
 
-                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '2rem', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Risk Intensity:</span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                            {[
-                                { c: '#22c55e', l: '< 50' },
-                                { c: '#eab308', l: '50+' },
-                                { c: '#f59e0b', l: '100+' },
-                                { c: '#f97316', l: '150+' },
-                                { c: '#ef4444', l: '200+' }
-                            ].map(item => (
-                                <div key={item.c} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <div style={{ width: '12px', height: '12px', background: item.c, borderRadius: '2px' }} />
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.l}</span>
-                                </div>
-                            ))}
+            {/* Legend */}
+            <div style={{ flexShrink: 0, display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Risk Intensity:</span>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    {[
+                        { c: '#22c55e', l: '< 50' },
+                        { c: '#eab308', l: '50+' },
+                        { c: '#f59e0b', l: '100+' },
+                        { c: '#f97316', l: '150+' },
+                        { c: '#ef4444', l: '200+' }
+                    ].map(item => (
+                        <div key={item.c} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '14px', height: '14px', background: item.c, borderRadius: '3px' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.l}</span>
                         </div>
-                    </div>
+                    ))}
                 </div>
-            </main>
+            </div>
 
             <style>{`
                 .map-tooltip {
